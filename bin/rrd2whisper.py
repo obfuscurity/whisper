@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import errno
 import os
 import sys
 import time
@@ -19,10 +20,14 @@ except ImportError:
 # Ignore SIGPIPE
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
-aggregationMethods = whisper.aggregationMethods
+aggregationMethods = list(whisper.aggregationMethods)
 
 # RRD doesn't have a 'sum' or 'total' type
 aggregationMethods.remove('sum')
+# RRD doesn't have a 'absmax' type
+aggregationMethods.remove('absmax')
+# RRD doesn't have a 'absmin' type
+aggregationMethods.remove('absmin')
 
 option_parser = optparse.OptionParser(usage='''%prog rrd_path''')
 option_parser.add_option(
@@ -37,6 +42,12 @@ option_parser.add_option(
     "aggregationMethod to set on output. One of: %s" %
     ', '.join(aggregationMethods),
     default='average',
+    type='string')
+option_parser.add_option(
+    '--destinationPath',
+    help="Path to place created whisper file. Defaults to the " +
+    "RRD file's source path.",
+    default=None,
     type='string')
 
 (options, args) = option_parser.parse_args()
@@ -75,9 +86,8 @@ else:
     rra_info['xff'] = rrd_info['rra[%d].xff' % i]
     rras.append(rra_info)
 
-datasources = []
 if 'ds' in rrd_info:
-  datasource_names = rrd_info['ds'].keys()
+  datasources = rrd_info['ds'].keys()
 else:
   ds_keys = [key for key in rrd_info if key.startswith('ds[')]
   datasources = list(set(key[3:].split(']')[0] for key in ds_keys))
@@ -104,7 +114,23 @@ for rra in relevant_rras:
 
 for datasource in datasources:
   now = int(time.time())
-  path = rrd_path.replace('.rrd', '_%s.wsp' % datasource)
+  suffix = '_%s' % datasource if len(datasources) > 1 else ''
+
+  if options.destinationPath:
+    destination_path = options.destinationPath
+    if not os.path.isdir(destination_path):
+      try:
+        os.makedirs(destination_path)
+      except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(destination_path):
+          pass
+        else:
+          raise
+    rrd_file = os.path.basename(rrd_path).replace('.rrd', '%s.wsp' % suffix)
+    path = destination_path + '/' + rrd_file
+  else:
+    path = rrd_path.replace('.rrd', '%s.wsp' % suffix)
+
   try:
     whisper.create(path, archives, xFilesFactor=xFilesFactor)
   except whisper.InvalidConfiguration as e:
@@ -131,7 +157,7 @@ for datasource in datasources:
     values = [row[column_index] for row in rows]
     timestamps = list(range(*time_info))
     datapoints = zip(timestamps, values)
-    datapoints = filter(lambda p: p[1] is not None, datapoints)
+    datapoints = [datapoint for datapoint in datapoints if datapoint[1] is not None]
     print(' migrating %d datapoints from archive %d' % (len(datapoints), archiveNumber))
     archiveNumber -= 1
     whisper.update_many(path, datapoints)

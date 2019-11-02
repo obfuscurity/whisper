@@ -1,6 +1,9 @@
 # Whisper
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/f00d0b65802742e29de56f3744503ab0)](https://www.codacy.com/app/graphite-project/whisper?utm_source=github.com&utm_medium=referral&utm_content=graphite-project/whisper&utm_campaign=badger)
 [![Build Status](https://secure.travis-ci.org/graphite-project/whisper.png)](http://travis-ci.org/graphite-project/whisper)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fgraphite-project%2Fwhisper.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fgraphite-project%2Fwhisper?ref=badge_shield)
+[![codecov](https://codecov.io/gh/graphite-project/whisper/branch/master/graph/badge.svg)](https://codecov.io/gh/graphite-project/whisper)
 
 ## Overview
 
@@ -35,7 +38,11 @@ Options:
   --aggregationMethod=AGGREGATIONMETHOD
                         The consolidation function to fetch from on input and
                         aggregationMethod to set on output. One of: average,
-                        last, max, min
+                        last, max, min, avg_zero, absmax, absmin
+  --destinationPath=DESTINATIONPATH
+                        Path to place created whisper file. Defaults to the
+                        RRD file's source path.
+
 ```
 
 whisper-create.py
@@ -59,7 +66,7 @@ Options:
   --xFilesFactor=XFILESFACTOR
   --aggregationMethod=AGGREGATIONMETHOD
                         Function to use when aggregating values (average, sum,
-                        last, max, min)
+                        last, max, min, avg_zero, absmax, absmin)
   --overwrite
   --estimate            Don't create a whisper file, estimate storage requirements based on archive definitions
 ```
@@ -73,6 +80,9 @@ Usage: whisper-dump.py path
 
 Options:
   -h, --help  show this help message and exit
+  --pretty    Show human-readable timestamps instead of unix times
+  -t TIME_FORMAT, --time-format=TIME_FORMAT
+              Time format to use with --pretty; see time.strftime()
 ```
 
 whisper-fetch.py
@@ -90,6 +100,8 @@ Options:
                  (default: now)
   --json         Output results in JSON form
   --pretty       Show human-readable timestamps instead of unix times
+  -t TIME_FORMAT, --time-format=TIME_FORMAT
+                 Time format to use with --pretty; see time.strftime()
   --drop=DROP    Specify 'nulls' to drop all null values. Specify 'zeroes' to
                  drop all zero values. Specify 'empty' to drop both null and
                  zero values.
@@ -154,7 +166,7 @@ Options:
                         Change the xFilesFactor
   --aggregationMethod=AGGREGATIONMETHOD
                         Change the aggregation function (average, sum, last,
-                        max, min)
+                        max, min, avg_zero, absmax, absmin)
   --force               Perform a destructive change
   --newfile=NEWFILE     Create a new database file without removing the
                         existing one
@@ -169,7 +181,7 @@ whisper-set-aggregation-method.py
 Change the aggregation method of an existing whisper file.
 
 ```
-Usage: whisper-set-aggregation-method.py path <average|sum|last|max|min>
+Usage: whisper-set-aggregation-method.py path <average|sum|last|max|min|avg_zero|absmax|absmin>
 
 Options:
   -h, --help  show this help message and exit
@@ -199,6 +211,9 @@ Options:
   --ignore-empty  skip comparison if either value is undefined
   --columns       print output in simple columns
   --no-headers    do not print column headers
+  --until=UNTIL   Unix epoch time of the end of your requested interval
+                  (default: now)
+  --json          Output results in JSON form
 ```
 
 ## License
